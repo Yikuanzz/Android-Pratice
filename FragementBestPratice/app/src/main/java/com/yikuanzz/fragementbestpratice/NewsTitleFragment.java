@@ -1,17 +1,27 @@
 package com.yikuanzz.fragementbestpratice;
 
+import android.app.ActivityManager;
+import android.content.Context;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.FrameLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
+import androidx.fragment.app.FragmentTransaction;
+import androidx.lifecycle.Lifecycle;
+import androidx.lifecycle.LifecycleEventObserver;
+import androidx.lifecycle.LifecycleOwner;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+
+import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -48,9 +58,10 @@ public class NewsTitleFragment extends Fragment {
                     News news = mNewsList.get(holder.getAdapterPosition());
                     if (isTwoPane){
                         // 如果是双页模式就刷新 NewsContentFragment 中的内容
-                        NewsContentFragment newsContentFragment =
-                                (NewsContentFragment) getChildFragmentManager().
-                                        findFragmentById(R.id.news_content_fragment);
+                        NewsContentFragment newsContentFragment = (NewsContentFragment)
+                                getParentFragmentManager().findFragmentById(R.id.news_content_fragment);
+//                        assert newsContentFragment != null;
+
                         newsContentFragment.refresh(news.getTitle(), news.getContent());
                     } else{
                         // 如果是单页模式就启动 NewsContentActivity
@@ -75,10 +86,13 @@ public class NewsTitleFragment extends Fragment {
         }
     }
 
+
+
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.news_title_frag, container, false);
+
 
         // 绑定 RecyclerView
         RecyclerView recyclerView = (RecyclerView) view.findViewById(R.id.news_title_recycler_view);
@@ -87,8 +101,9 @@ public class NewsTitleFragment extends Fragment {
         NewsAdapter newsAdapter = new NewsAdapter(getNews());
         recyclerView.setAdapter(newsAdapter);
 
-        String s = String.valueOf(getActivity().findViewById(R.id.news_content_layout));
-        Log.d("zzk123", s);
+        MainActivity activity = (MainActivity) getActivity();
+        String s = String.valueOf(activity.getTwoPlane());
+
         return view;
     }
 
@@ -114,15 +129,25 @@ public class NewsTitleFragment extends Fragment {
     }
 
 
-//    @Override
-//    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
-//        super.onViewCreated(view, savedInstanceState);
-//        String msg = String.valueOf(getActivity());
-//        Log.d("newsLayout123", msg);
-//        if (getActivity().findViewById(R.id.news_content_layout) != null){
-//            isTwoPane = true;
-//        } else{
-//            isTwoPane = false;
-//        }
-//    }
+    @Override
+    public void onAttach(@NonNull @NotNull Context context) {
+        super.onAttach(context);
+
+        //requireActivity() 返回的是宿主activity
+        requireActivity().getLifecycle().addObserver(new LifecycleEventObserver() {
+            @Override
+            public void onStateChanged(@NonNull @NotNull LifecycleOwner source, @NonNull @NotNull Lifecycle.Event event) {
+                if (event.getTargetState() == Lifecycle.State.CREATED){
+                    MainActivity activity = (MainActivity) getActivity();
+                    String msg = String.valueOf(activity);
+                    Log.d("onViewCreated", "111");
+                    Log.d("getNewsActivity", msg);
+                    String msg_ = String.valueOf(activity.getTwoPlane());
+                    Log.d("getNewsContentLayout", msg_);
+                    isTwoPane = activity.getTwoPlane();
+                    requireActivity().getLifecycle().removeObserver(this);  //这里是删除观察者
+                }
+            }
+        });
+    }
 }
